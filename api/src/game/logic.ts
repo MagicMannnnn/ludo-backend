@@ -78,16 +78,24 @@ export function createInitialState(): GameState {
 }
 
 
+export function hasAnyLegalMove(state: GameState): boolean {
+  const seat = state.turnSeat;
+  const roll = state.lastRoll;
+  if (!roll) return false;
+
+  return state.players[seat].tokens.some(t => {
+    if (t.madeItHome) return false;
+    if (t.position === -1) return roll === 6;
+    return true; 
+  });
+}
+
 
 
 export function applyRoll(state: GameState): { nextState: GameState; roll: number } {
-
-  if (state.players[state.turnSeat].is_ai) {
-    state.turnSeat = (state.turnSeat + 1) % 4; // skip AI turn for now
-    return { nextState: state, roll: 0 };
-  }
   
   const roll = Math.floor(Math.random() * 6) + 1;
+  state.lastRoll = roll;
 
   let canGo = false;
   if (roll !== 6) {
@@ -143,15 +151,19 @@ export function applyMove(state: GameState, tokenId: number): GameState {
       }
 
       // handle entering home column
-      if (token.position === state.board.seatsEndIndex[state.turnSeat]) {
+      if (token.position === state.board.seatsEndIndex[state.turnSeat] + 1) {
         token.position = state.board.mainLoopLength + 1; // move to first cell of home column
-        break;
       }
     }
 
     // handle reaching end of home column
     if (token.position === state.board.mainLoopLength + state.board.homeColumnLength) {
       token.madeItHome = true;
+    }
+
+    if (token.position > state.board.mainLoopLength + state.board.homeColumnLength) { 
+      token.position -= roll;    
+      throw new Error("Invalid move, cannot move beyond home");
     }
   }
 
@@ -164,4 +176,28 @@ export function applyMove(state: GameState, tokenId: number): GameState {
   }
 
   return state;
+}
+
+
+export function AIMove(state: GameState): { nextState: GameState; roll: number } {
+
+  let { nextState, roll } = applyRoll(state);
+
+  if (nextState.players[nextState.turnSeat].waitingForTurn) {
+    for (let token of nextState.players[nextState.turnSeat].tokens) {
+      try {
+        const newState = applyMove({ ...nextState }, token.id);
+        nextState = newState;
+        break;
+      } catch (e) {
+        
+      }
+    }
+    if (nextState.players[nextState.turnSeat].waitingForTurn) {
+      nextState.players[nextState.turnSeat].waitingForTurn = false;
+      nextState.turnSeat = (nextState.turnSeat + 1) % 4;
+    }
+  }
+
+  return { nextState, roll };
 }

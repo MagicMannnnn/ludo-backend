@@ -55,10 +55,17 @@ router.post("/api/roll", async (req, res) => {
     if (!code) throw new Error("Missing code");
     if (!playerId) throw new Error("Missing playerId");
 
-    const snap = await service.roll(code, playerId);
+    let snap = await service.roll(code, playerId);
 
-    const io = req.app.get("io") as IOServer;
+    let io = req.app.get("io") as IOServer;
     io.to(`game:${code}`).emit("game_state", snap);
+
+    while (snap.state.players[snap.state.turnSeat].is_ai) {
+      snap = await service.AIturn(code);
+      io.to(`game:${code}`).emit("game_state", snap);
+    }
+
+
 
     res.json(snap);
   } catch (e: any) {
@@ -75,10 +82,15 @@ router.post("/api/move", async (req, res) => {
     if (!playerId) throw new Error("Missing playerId");
     if (isNaN(tokenId)) throw new Error("Missing tokenId");
 
-    const snap = await service.move(code, playerId, tokenId);
+    let snap = await service.move(code, playerId, tokenId);
 
     const io = req.app.get("io") as IOServer;
     io.to(`game:${code}`).emit("game_state", snap);
+
+    while (snap.state.players[snap.state.turnSeat].is_ai) {
+      snap = await service.AIturn(code);
+      io.to(`game:${code}`).emit("game_state", snap);
+    }
 
     res.json(snap);
   } catch (e: any) {

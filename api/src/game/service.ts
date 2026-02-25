@@ -40,3 +40,10 @@ export async function move(code: string, playerId: string, tokenId: number): Pro
     return { code, playerId: out.playerId, seat: out.seat, ...out.snapshot };
   });
 }
+
+export async function AIturn(code: string): Promise<GameSnapshot> {
+  return tx(async (client) => {
+    const out = await repo.AIturn(client, code);
+    return { code, playerId: out.playerId, seat: out.seat, ...out.snapshot };
+  });
+}

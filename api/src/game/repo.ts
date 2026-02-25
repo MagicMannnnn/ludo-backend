@@ -1,7 +1,7 @@
 import type pg from "pg";
 import type { GameSnapshot, GameState } from "../types.js";
 import { randomBytes } from "crypto";
-import { createInitialState as createInitialGameState, applyRoll, applyMove } from "./logic.js";
+import { createInitialState as createInitialGameState, applyRoll, applyMove, AIMove, hasAnyLegalMove } from "./logic.js";
 
 function generateCode(): string {
   return randomBytes(3).toString("hex").toUpperCase() // e.g. A1B2C3
@@ -166,19 +166,22 @@ export async function roll(
     );
   } 
 
-  const { nextState, roll } = applyRoll(snapshot.state);
+  let { nextState, roll } = applyRoll(snapshot.state);
   nextState.lastRoll = roll;
 
-  while (nextState.players[nextState.turnSeat].is_ai) {
-    //AITURN SKIP FOR NOW - just pass turn to next player
-    nextState.turnSeat = (nextState.turnSeat + 1) % 4;
+  if (nextState.players[nextState.turnSeat].waitingForTurn) {
+    if (!hasAnyLegalMove(nextState)) {
+      // no legal moves even after roll -> auto pass
+      nextState.players[nextState.turnSeat].waitingForTurn = false;
+      nextState.turnSeat = (nextState.turnSeat + 1) % 4;
+    }
   }
 
   await saveState(client, snapshot.game.id, nextState);
 
   return {
     playerId: params.playerId,
-    seat: snapshot.state.turnSeat,
+    seat: nextState.turnSeat,
     snapshot: {
       game: snapshot.game,
       players: snapshot.players,
@@ -211,11 +214,6 @@ export async function move(
 
   const nextState = applyMove(snapshot.state, params.tokenId);
 
-  while (nextState.players[nextState.turnSeat].is_ai) {
-    //AITURN SKIP FOR NOW - just pass turn to next player
-    nextState.turnSeat = (nextState.turnSeat + 1) % 4;
-  }
-
   await saveState(client, snapshot.game.id, nextState);
 
   return {
@@ -228,6 +226,31 @@ export async function move(
     }
   }
 
+}
+
+export async function AIturn(client: pg.PoolClient, code: string): Promise<{ playerId: string; seat: number; snapshot: GameSnapshot }> {
+  
+  const snapshot = await getSnapshot(client, code);
+  const seat = snapshot.state.turnSeat;
+
+  const aiPlayer = snapshot.players.find(p => p.seat === seat && p.is_ai);
+  if (!aiPlayer) throw new Error("Not AI's turn");
+
+  // Wait 800ms before AI acts
+  await new Promise(resolve => setTimeout(resolve, 800));
+
+  const { nextState, roll } = AIMove(snapshot.state);
+
+  snapshot.state = nextState;
+  snapshot.state.lastRoll = roll;
+
+  await saveState(client, snapshot.game.id, snapshot.state);
+
+  return {
+    playerId: aiPlayer.id,
+    seat: aiPlayer.seat,
+    snapshot: snapshot,
+  };
 }
 
 export async function getSnapshot(
