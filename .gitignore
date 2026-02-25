@@ -1,0 +1,49 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# dotenv environment variables
+.env
+.env.*
+
+# TypeScript
+*.tsbuildinfo
+
+# Docker
+*.local
+Dockerfile*
+.dockerignore
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Database
+*.sqlite
+*.db
+*.db-journal
+
+# Build output
+dist/
+build/
+
+# Misc
+coverage/
+
+# Ignore database init scripts if generated
+/db/*.sql
+!db/init.sql

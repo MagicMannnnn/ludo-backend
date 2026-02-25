@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ludo-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ludo}
+      POSTGRES_USER: ${POSTGRES_USER:-ludo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ludo}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ludo} -d ${POSTGRES_DB:-ludo}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: ludo-api
+    env_file:
+      - ./.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db_data:
