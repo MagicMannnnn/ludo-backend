@@ -81,6 +81,11 @@ export function createInitialState(): GameState {
 
 
 export function applyRoll(state: GameState): { nextState: GameState; roll: number } {
+
+  if (state.players[state.turnSeat].is_ai) {
+    state.turnSeat = (state.turnSeat + 1) % 4; // skip AI turn for now
+    return { nextState: state, roll: 0 };
+  }
   
   const roll = Math.floor(Math.random() * 6) + 1;
 
