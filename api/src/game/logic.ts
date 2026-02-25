@@ -34,6 +34,7 @@ export function createInitialState(): GameState {
           { id: 3, position: -1, madeItHome: false },
           { id: 4, position: -1, madeItHome: false },
         ],
+        waitingForTurn: false,
       },
       {
         name: "AI 1",
@@ -45,7 +46,9 @@ export function createInitialState(): GameState {
           { id: 3, position: -1, madeItHome: false },
           { id: 4, position: -1, madeItHome: false },
         ],
+        waitingForTurn: false,
       },
+
       {
         name: "AI 2",
         seat: 2,
@@ -56,6 +59,7 @@ export function createInitialState(): GameState {
           { id: 3, position: -1, madeItHome: false },
           { id: 4, position: -1, madeItHome: false },
         ],
+        waitingForTurn: false,
       },
       {
         name: "AI 3",
@@ -67,6 +71,7 @@ export function createInitialState(): GameState {
           { id: 3, position: -1, madeItHome: false },
           { id: 4, position: -1, madeItHome: false },
         ],
+        waitingForTurn: false,
       },
     ],
   };
@@ -92,17 +97,64 @@ export function applyRoll(state: GameState): { nextState: GameState; roll: numbe
   if (!canGo) {
     // pass turn to next player
     state.turnSeat = (state.turnSeat + 1) % 4;
+  } else {
+    state.players[state.turnSeat].waitingForTurn = true; // player must now choose a move
   }
 
   return { nextState: state, roll };
 }
 
-export function applyMove(state: GameState, move: unknown): GameState {
-  // TODO: implement move logic using your move payload type
-  throw new Error("applyMove not implemented");
-}
+export function applyMove(state: GameState, tokenId: number): GameState {
+  
 
-export function hasAnyLegalMove(state: GameState): boolean {
-  // TODO: detect if current player can move after rolling; if not, pass turn
-  return true;
+  const token = state.players[state.turnSeat].tokens.find(t => t.id === tokenId);
+  if (!token) {
+    throw new Error("Invalid tokenId");
+  }
+
+  if (token.madeItHome) {
+    throw new Error("Token already home");
+  }
+
+  const roll = state.lastRoll;
+  if (!roll) {
+    throw new Error("No roll to apply");
+  }
+
+  if (token.position === -1) {
+    if (roll !== 6) {
+      throw new Error("Must roll a 6 to move token out of base");
+    }
+    token.position = state.board.seatsStartingIndex[state.turnSeat];
+  } else {
+    for (let i = 0; i < roll; i++) {
+      token.position += 1;
+
+      // handle looping around main board
+      if (token.position === state.board.mainLoopLength) {
+        token.position = 0;
+      }
+
+      // handle entering home column
+      if (token.position === state.board.seatsEndIndex[state.turnSeat]) {
+        token.position = state.board.mainLoopLength + 1; // move to first cell of home column
+        break;
+      }
+    }
+
+    // handle reaching end of home column
+    if (token.position === state.board.mainLoopLength + state.board.homeColumnLength) {
+      token.madeItHome = true;
+    }
+  }
+
+
+  state.players[state.turnSeat].waitingForTurn = false; // move applied, no longer waiting for player's move
+
+  if (roll !== 6) {
+    // advance turn to next player
+    state.turnSeat = (state.turnSeat + 1) % 4;
+  }
+
+  return state;
 }

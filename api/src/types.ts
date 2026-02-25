@@ -30,6 +30,7 @@ export type PlayerState = {
   seat: number;
   is_ai: boolean;
   tokens: [Token, Token, Token, Token]; 
+  waitingForTurn: boolean; // if true, this player has rolled and is waiting to make a move. if false, this player can roll (if it's their turn) or is waiting for their turn.
 };
 
 export type Token = {

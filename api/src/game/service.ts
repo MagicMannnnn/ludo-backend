@@ -34,14 +34,9 @@ export async function roll(code: string, playerId: string): Promise<GameSnapshot
   });
 }
 
-export async function move(code: string, playerId: string, movePayload: unknown): Promise<GameSnapshot> {
+export async function move(code: string, playerId: string, tokenId: number): Promise<GameSnapshot> {
   return tx(async (client) => {
-    // TODO:
-    // 1) const snap = await repo.getSnapshot(client, code)
-    // 2) validate playerId is in this game + it is their turn
-    // 3) const nextState = logic.applyMove(snap.state, movePayload)
-    // 4) await repo.saveState(client, snap.game.id, nextState)
-    // 5) return await repo.getSnapshot(client, code)
-    throw new Error("service.move not implemented");
+    const out = await repo.move(client, { code, playerId, tokenId });
+    return { code, playerId: out.playerId, seat: out.seat, ...out.snapshot };
   });
 }

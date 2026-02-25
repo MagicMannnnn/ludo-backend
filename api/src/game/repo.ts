@@ -1,7 +1,7 @@
 import type pg from "pg";
 import type { GameSnapshot, GameState } from "../types.js";
 import { randomBytes } from "crypto";
-import { createInitialState as createInitialGameState, applyRoll } from "./logic.js";
+import { createInitialState as createInitialGameState, applyRoll, applyMove } from "./logic.js";
 
 function generateCode(): string {
   return randomBytes(3).toString("hex").toUpperCase() // e.g. A1B2C3
@@ -180,7 +180,43 @@ export async function roll(
       state: nextState,
     }
   }
+}
 
+export async function move(
+  client: pg.PoolClient,
+  params: { code: string; playerId: string, tokenId: number }
+): Promise<{ playerId: string; seat: number; snapshot: GameSnapshot }> {
+
+// implement this so checks the ID, checks if it can move, applies last roll to mveo etc - also automate AI moves to skip turn
+
+  const gameRes = await client.query(
+    `SELECT * FROM games WHERE code = $1`,
+    [params.code]
+  )
+
+  if (!gameRes.rowCount) {
+    throw new Error("Game not found")
+  }
+
+  const snapshot = await getSnapshot(client, params.code)
+
+  if (snapshot.players.find((p) => p.id === params.playerId)?.seat !== snapshot.state.turnSeat) {
+    throw new Error("Not your turn")
+  }
+
+  const nextState = applyMove(snapshot.state, params.tokenId);
+
+  await saveState(client, snapshot.game.id, nextState);
+
+  return {
+    playerId: params.playerId,
+    seat: nextState.turnSeat,
+    snapshot: {
+      game: snapshot.game,
+      players: snapshot.players,
+      state: nextState,
+    }
+  }
 
 }
 

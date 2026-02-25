@@ -70,11 +70,12 @@ router.post("/api/move", async (req, res) => {
   try {
     const code = String(req.body?.code || "").trim().toUpperCase();
     const playerId = String(req.body?.playerId || "").trim();
-    const movePayload = req.body?.move; // TODO: define your move payload shape
+    const tokenId = Number(req.body?.tokenId);
     if (!code) throw new Error("Missing code");
     if (!playerId) throw new Error("Missing playerId");
+    if (isNaN(tokenId)) throw new Error("Missing tokenId");
 
-    const snap = await service.move(code, playerId, movePayload);
+    const snap = await service.move(code, playerId, tokenId);
 
     const io = req.app.get("io") as IOServer;
     io.to(`game:${code}`).emit("game_state", snap);
