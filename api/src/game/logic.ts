@@ -172,7 +172,19 @@ export function applyMove(state: GameState, tokenId: number): GameState {
 
   state.players[state.turnSeat].waitingForTurn = false; // move applied, no longer waiting for player's move
 
-  if (roll !== 6) {
+  //check to see if other players' tokens are captured and not on safe zone (sent back to base)
+  let captured = false;
+  for (let p of state.players) {
+    if (p.seat === state.turnSeat) continue; // skip current player's tokens
+    for (let t of p.tokens) {
+      if (t.position === token.position && !state.board.safeZoneIndex.includes(t.position)) {
+        t.position = -1; // send captured token back to base
+        captured = true;
+      }
+    }
+  }
+
+  if (roll !== 6 && !captured) {
     // advance turn to next player
     state.turnSeat = (state.turnSeat + 1) % 4;
     let count = 0;
