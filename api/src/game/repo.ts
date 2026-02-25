@@ -169,6 +169,11 @@ export async function roll(
   const { nextState, roll } = applyRoll(snapshot.state);
   nextState.lastRoll = roll;
 
+  while (nextState.players[nextState.turnSeat].is_ai) {
+    //AITURN SKIP FOR NOW - just pass turn to next player
+    nextState.turnSeat = (nextState.turnSeat + 1) % 4;
+  }
+
   await saveState(client, snapshot.game.id, nextState);
 
   return {
@@ -205,6 +210,11 @@ export async function move(
   }
 
   const nextState = applyMove(snapshot.state, params.tokenId);
+
+  while (nextState.players[nextState.turnSeat].is_ai) {
+    //AITURN SKIP FOR NOW - just pass turn to next player
+    nextState.turnSeat = (nextState.turnSeat + 1) % 4;
+  }
 
   await saveState(client, snapshot.game.id, nextState);
 

@@ -97,6 +97,8 @@ export function applyRoll(state: GameState): { nextState: GameState; roll: numbe
         break;
       }
     }
+  }else {
+    canGo = true; // if roll is 6, player can always move (either move a token out of base or move an existing token)
   }
 
   if (!canGo) {
