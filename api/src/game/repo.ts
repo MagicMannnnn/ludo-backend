@@ -178,7 +178,7 @@ export async function roll(
       // only 1 legal move -> auto move
       for (let token of nextState.players[nextState.turnSeat].tokens) {
         try {
-          const newState = applyMove({ ...nextState }, token.id);
+          const newState = applyMove(nextState, token.id);
           nextState = newState;
           break;
         } catch (e) {
