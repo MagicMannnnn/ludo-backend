@@ -78,16 +78,16 @@ export function createInitialState(): GameState {
 }
 
 
-export function hasAnyLegalMove(state: GameState): boolean {
+export function LegalMovesCount(state: GameState): number {
   const seat = state.turnSeat;
   const roll = state.lastRoll;
-  if (!roll) return false;
+  if (!roll) return 0;
 
-  return state.players[seat].tokens.some(t => {
+  return state.players[seat].tokens.filter(t => {
     if (t.madeItHome) return false;
     if (t.position === -1) return roll === 6;
     return true; 
-  });
+  }).length;
 }
 
 

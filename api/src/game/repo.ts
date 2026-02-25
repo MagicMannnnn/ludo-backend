@@ -1,7 +1,7 @@
 import type pg from "pg";
 import type { GameSnapshot, GameState } from "../types.js";
 import { randomBytes } from "crypto";
-import { createInitialState as createInitialGameState, applyRoll, applyMove, AIMove, hasAnyLegalMove } from "./logic.js";
+import { createInitialState as createInitialGameState, applyRoll, applyMove, AIMove, LegalMovesCount } from "./logic.js";
 
 function generateCode(): string {
   return randomBytes(3).toString("hex").toUpperCase() // e.g. A1B2C3
@@ -170,10 +170,25 @@ export async function roll(
   nextState.lastRoll = roll;
 
   if (nextState.players[nextState.turnSeat].waitingForTurn) {
-    if (!hasAnyLegalMove(nextState)) {
+    if (LegalMovesCount(nextState) === 0) {
       // no legal moves even after roll -> auto pass
       nextState.players[nextState.turnSeat].waitingForTurn = false;
       nextState.turnSeat = (nextState.turnSeat + 1) % 4;
+    }else if (LegalMovesCount(nextState) === 1) {
+      // only 1 legal move -> auto move
+      for (let token of nextState.players[nextState.turnSeat].tokens) {
+        try {
+          const newState = applyMove({ ...nextState }, token.id);
+          nextState = newState;
+          break;
+        } catch (e) {
+          // not this token, try next
+        }
+      }
+      if (nextState.players[nextState.turnSeat].waitingForTurn) {
+        nextState.players[nextState.turnSeat].waitingForTurn = false;
+        nextState.turnSeat = (nextState.turnSeat + 1) % 4;
+      }
     }
   }
 
