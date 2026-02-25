@@ -75,11 +75,26 @@ export function createInitialState(): GameState {
 
 
 
-
-
 export function applyRoll(state: GameState): { nextState: GameState; roll: number } {
-  // TODO: implement roll logic
-  throw new Error("applyRoll not implemented");
+  
+  const roll = Math.floor(Math.random() * 6) + 1;
+
+  let canGo = false;
+  if (roll !== 6) {
+    for (let token of state.players[state.turnSeat].tokens) {
+      if (token.position !== -1) {
+        canGo = true;
+        break;
+      }
+    }
+  }
+
+  if (!canGo) {
+    // pass turn to next player
+    state.turnSeat = (state.turnSeat + 1) % 4;
+  }
+
+  return { nextState: state, roll };
 }
 
 export function applyMove(state: GameState, move: unknown): GameState {

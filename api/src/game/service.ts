@@ -28,15 +28,9 @@ export async function join(code: string, name: string): Promise<JoinResponse> {
 }
 
 export async function roll(code: string, playerId: string): Promise<GameSnapshot> {
-  return tx(async (client) => {
-    // TODO:
-    // 1) const snap = await repo.getSnapshot(client, code)
-    // 2) validate playerId is in this game + it is their turn
-    // 3) const { nextState, roll } = logic.applyRoll(snap.state)
-    // 4) if !logic.hasAnyLegalMove(nextState) => pass turn (your rule)
-    // 5) await repo.saveState(client, snap.game.id, nextState)
-    // 6) return await repo.getSnapshot(client, code)
-    throw new Error("service.roll not implemented");
+    return tx(async (client) => {
+    const out = await repo.roll(client, { code, playerId });
+    return { code, playerId: out.playerId, seat: out.seat, ...out.snapshot };
   });
 }
 

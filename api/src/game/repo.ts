@@ -1,7 +1,7 @@
 import type pg from "pg";
 import type { GameSnapshot, GameState } from "../types.js";
 import { randomBytes } from "crypto";
-import { createInitialState as createInitialGameState } from "./logic.js";
+import { createInitialState as createInitialGameState, applyRoll } from "./logic.js";
 
 function generateCode(): string {
   return randomBytes(3).toString("hex").toUpperCase() // e.g. A1B2C3
@@ -57,7 +57,7 @@ export async function createGame(
   const state = createInitialGameState();
   state.players[0].name = params.hostName; // set host name in initial state
 
-  saveState(client, game.id, state); // save initial state to DB
+  await saveState(client, game.id, state); // save initial state to DB
 
   const snapshot = await getSnapshot(client, code)
 
@@ -74,11 +74,7 @@ export async function joinGame(
   client: pg.PoolClient,
   params: { code: string; name: string }
 ): Promise<{ playerId: string; seat: number; snapshot: GameSnapshot }> {
-  // TODO:
-  // - find game by code
-  // - choose seat (replace an AI slot, or pick empty)
-  // - update/insert player row
-  // - load snapshot and return it
+
 
   const gameRes = await client.query(
     `SELECT * FROM games WHERE code = $1`,
@@ -126,13 +122,65 @@ export async function joinGame(
   snapshot.state.players[player.seat].name = params.name; // update player name in snapshot
   snapshot.state.players[player.seat].is_ai = false; // update player AI status in snapshot
 
-  saveState(client, game.id, snapshot.state); // save updated state to DB
+  await saveState(client, game.id, snapshot.state); // save updated state to DB
 
   return {
     playerId: player.id,
     seat: player.seat,
     snapshot,
   }
+
+}
+
+
+export async function roll(
+  client: pg.PoolClient,
+  params: { code: string; playerId: string }
+): Promise<{ playerId: string; seat: number; snapshot: GameSnapshot }> {  
+
+  const gameRes = await client.query(
+    `SELECT * FROM games WHERE code = $1`,
+    [params.code]
+  )
+
+  if (!gameRes.rowCount) {
+    throw new Error("Game not found")
+  }
+
+  const snapshot = await getSnapshot(client, params.code)
+
+  if (snapshot.players.find((p) => p.id === params.playerId)?.seat !== snapshot.state.turnSeat) {
+    throw new Error("Not your turn")
+  }
+
+  //if not started, start now
+  if (!snapshot.state.started) {
+    snapshot.state.started = true;
+    await saveState(client, snapshot.game.id, snapshot.state);
+    await client.query(
+    `INSERT INTO games (code, status)
+     VALUES ($1, 'running')
+     ON CONFLICT (code) DO UPDATE SET status = EXCLUDED.status
+     RETURNING *`,
+    [params.code]   
+    );
+  } 
+
+  const { nextState, roll } = applyRoll(snapshot.state);
+  nextState.lastRoll = roll;
+
+  await saveState(client, snapshot.game.id, nextState);
+
+  return {
+    playerId: params.playerId,
+    seat: snapshot.state.turnSeat,
+    snapshot: {
+      game: snapshot.game,
+      players: snapshot.players,
+      state: nextState,
+    }
+  }
+
 
 }
 
@@ -168,7 +216,8 @@ export async function getSnapshot(
 export async function saveState(client: pg.PoolClient, gameId: string, state: GameState): Promise<void> {
   await client.query(
     `INSERT INTO game_states (game_id, state)
-     VALUES ($1, $2)`,
+     VALUES ($1, $2)
+     ON CONFLICT (game_id) DO UPDATE SET state = EXCLUDED.state`,
     [gameId, state]
   );
 }
