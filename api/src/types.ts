@@ -19,6 +19,7 @@ export type PlayerRow = {
 
 export type GameState = {
   started: boolean;
+  finished?: boolean;
   turnSeat: number; // whose turn is it? 0..3
   lastRoll: number | null;
   board: BoardState;
@@ -31,6 +32,7 @@ export type PlayerState = {
   is_ai: boolean;
   tokens: [Token, Token, Token, Token]; 
   waitingForTurn: boolean; // if true, this player has rolled and is waiting to make a move. if false, this player can roll (if it's their turn) or is waiting for their turn.
+  finishingPosition?: number; // finishing position if player has finished (1 for first place, 2 for second, etc.)
 };
 
 export type Token = {
@@ -44,6 +46,7 @@ export type BoardState = {
   homeColumnLength: number;
   seatsStartingIndex: [number, number, number, number]; //main loop index for each seat's starting cell where token will spawn after rolling a 6
   seatsEndIndex: [number, number, number, number]; //main loop index for last cell before home column
+  safeZoneIndex: number[]; // main loop indices of safe zones where tokens cannot be captured
 };
 
 

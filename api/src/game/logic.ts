@@ -22,6 +22,7 @@ export function createInitialState(): GameState {
       homeColumnLength: 6,
       seatsStartingIndex: [0, 13, 26, 39],
       seatsEndIndex: [50, 11, 24, 37],
+      safeZoneIndex: [0, 8, 13, 21, 26, 34, 39, 47],
     },
     players: [
       {
@@ -86,6 +87,7 @@ export function LegalMovesCount(state: GameState): number {
   return state.players[seat].tokens.filter(t => {
     if (t.madeItHome) return false;
     if (t.position === -1) return roll === 6;
+    if (t.position + roll > state.board.mainLoopLength + state.board.homeColumnLength) return false; // cannot move beyond home
     return true; 
   }).length;
 }
@@ -173,6 +175,20 @@ export function applyMove(state: GameState, tokenId: number): GameState {
   if (roll !== 6) {
     // advance turn to next player
     state.turnSeat = (state.turnSeat + 1) % 4;
+    let count = 0;
+    while (state.players[state.turnSeat].finishingPosition) {
+      state.turnSeat = (state.turnSeat + 1) % 4;
+      count++;
+      if (count > 3) {
+        break; // all players finished, break to avoid infinite loop
+      }
+    }
+  }
+
+  // check if player has finished
+  if (state.players[state.turnSeat].tokens.every(t => t.madeItHome)) {
+    const finishingPosition = state.players.filter(p => p.finishingPosition).length + 1;
+    state.players[state.turnSeat].finishingPosition = finishingPosition;
   }
 
   return state;
@@ -180,6 +196,12 @@ export function applyMove(state: GameState, tokenId: number): GameState {
 
 
 export function AIMove(state: GameState): { nextState: GameState; roll: number } {
+
+  //check if game over
+  if (state.players.filter(p => p.finishingPosition).length >= 3) {
+    state.finished = true;
+    return { nextState: state, roll: 0 };
+  }
 
   let { nextState, roll } = applyRoll(state);
 

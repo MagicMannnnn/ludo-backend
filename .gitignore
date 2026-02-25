@@ -21,10 +21,6 @@ pids
 # TypeScript
 *.tsbuildinfo
 
-# Docker
-*.local
-Dockerfile*
-.dockerignore
 
 # VS Code
 .vscode/
