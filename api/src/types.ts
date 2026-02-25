@@ -17,16 +17,49 @@ export type PlayerRow = {
   created_at: string;
 };
 
-export type TokenPos = number; // -1 = in yard, 0..56 path index (placeholder scale)
-
 export type GameState = {
-  version: 1;
   started: boolean;
-  turnSeat: number; // whose turn (0..3)
-  lastRoll: number | null; // 1..6
-  // Each seat has 4 tokens
-  tokens: TokenPos[][];
-  // For quick client rendering
-  seatToPlayerId: (string | null)[];
-  updatedAt: string;
+  turnSeat: number; // whose turn is it? 0..3
+  lastRoll: number | null;
+  board: BoardState;
+  players: [PlayerState, PlayerState, PlayerState, PlayerState];
+  };
+
+export type PlayerState = {
+  name: string;
+  seat: number;
+  is_ai: boolean;
+  tokens: [Token, Token, Token, Token]; 
 };
+
+export type Token = {
+  id: number;
+  position: number; // -1 not out, 0..mainLoopLength-1 on main loop, mainLoopLength..mainLoopLength+homeColumnLength-1 in home column
+  madeItHome: boolean; // reached home column end
+};
+
+export type BoardState = {
+  mainLoopLength: number;
+  homeColumnLength: number;
+  seatsStartingIndex: [number, number, number, number]; //main loop index for each seat's starting cell where token will spawn after rolling a 6
+  seatsEndIndex: [number, number, number, number]; //main loop index for last cell before home column
+};
+
+
+export type GameSnapshot = {
+  game: GameRow;
+  players: PlayerRow[];
+  state: GameState;
+};
+
+export type HostResponse = {
+  code: string;
+  playerId: string;
+  seat: number; // 0..3
+} & GameSnapshot;
+
+export type JoinResponse = {
+  code: string;
+  playerId: string;
+  seat: number; // 0..3
+} & GameSnapshot;

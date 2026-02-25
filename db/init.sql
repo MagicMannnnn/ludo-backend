@@ -1,10 +1,9 @@
--- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS games (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code        TEXT NOT NULL UNIQUE,
-  status      TEXT NOT NULL DEFAULT 'lobby', -- lobby | active | finished
+  status      TEXT NOT NULL DEFAULT 'lobby',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -19,7 +18,6 @@ CREATE TABLE IF NOT EXISTS players (
   UNIQUE (game_id, seat)
 );
 
--- Stores the full game state as JSON to keep the scaffold simple.
 CREATE TABLE IF NOT EXISTS game_states (
   game_id     UUID PRIMARY KEY REFERENCES games(id) ON DELETE CASCADE,
   state       JSONB NOT NULL,

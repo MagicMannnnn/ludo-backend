@@ -1,24 +1,14 @@
 type Level = "debug" | "info" | "warn" | "error";
-
 const order: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
-
-function now() {
-  return new Date().toISOString();
-}
 
 export function makeLogger(level: Level) {
   const min = order[level] ?? order.info;
+  const now = () => new Date().toISOString();
 
   function log(l: Level, msg: string, extra?: unknown) {
     if (order[l] < min) return;
-    const base = `[${now()}] ${l.toUpperCase()} ${msg}`;
-    if (extra === undefined) {
-      // eslint-disable-next-line no-console
-      console.log(base);
-    } else {
-      // eslint-disable-next-line no-console
-      console.log(base, extra);
-    }
+    // eslint-disable-next-line no-console
+    console.log(`[${now()}] ${l.toUpperCase()} ${msg}`, extra ?? "");
   }
 
   return {
