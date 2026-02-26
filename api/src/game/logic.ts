@@ -188,7 +188,7 @@ export function applyMove(state: GameState, tokenId: number): GameState {
 
   }
 
-  if (roll !== 6 && !captured) {
+  if (roll !== 6 && !captured && !token.madeItHome) {
     // advance turn to next player
     state.turnSeat = (state.turnSeat + 1) % 4;
     let count = 0;

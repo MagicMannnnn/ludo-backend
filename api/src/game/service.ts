@@ -47,3 +47,10 @@ export async function AIturn(code: string): Promise<GameSnapshot> {
     return { code, playerId: out.playerId, seat: out.seat, ...out.snapshot };
   });
 }
+
+export async function leave(code: string, playerId: string): Promise<GameSnapshot> {
+  return tx(async (client) => {
+    const out = await repo.leave(client, { code, playerId });
+    return { code, playerId: out.playerId, seat: out.seat, ...out.snapshot };
+  });
+}

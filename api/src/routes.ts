@@ -85,6 +85,31 @@ router.post("/api/move", async (req, res) => {
     let snap = await service.move(code, playerId, tokenId);
 
     const io = req.app.get("io") as IOServer;
+    console.log(io);
+    io.to(`game:${code}`).emit("game_state", snap);
+
+    while (snap.state.players[snap.state.turnSeat].is_ai) {
+      snap = await service.AIturn(code);
+      io.to(`game:${code}`).emit("game_state", snap);
+    }
+
+    res.json(snap);
+  } catch (e: any) {
+    res.status(400).json({ error: e?.message ?? "Error" });
+  }
+});
+
+router.post("/api/leave", async (req, res) => {
+  try {
+    const code = String(req.body?.code || "").trim().toUpperCase();
+    const playerId = String(req.body?.playerId || "").trim();
+    if (!code) throw new Error("Missing code");
+    if (!playerId) throw new Error("Missing playerId");
+
+    let snap = await service.leave(code, playerId);
+
+    const io = req.app.get("io") as IOServer;
+    console.log(io);
     io.to(`game:${code}`).emit("game_state", snap);
 
     while (snap.state.players[snap.state.turnSeat].is_ai) {

@@ -85,9 +85,9 @@ export async function joinGame(
     throw new Error("Game not found")
   }
 
-  if (gameRes.rows[0].status !== "lobby") {
-    throw new Error("Game already started")
-  }
+  // if (gameRes.rows[0].status !== "lobby") {
+  //   throw new Error("Game already started")
+  // }
 
   const game = gameRes.rows[0]
 
@@ -210,8 +210,6 @@ export async function move(
   params: { code: string; playerId: string, tokenId: number }
 ): Promise<{ playerId: string; seat: number; snapshot: GameSnapshot }> {
 
-// implement this so checks the ID, checks if it can move, applies last roll to mveo etc - also automate AI moves to skip turn
-
   const gameRes = await client.query(
     `SELECT * FROM games WHERE code = $1`,
     [params.code]
@@ -267,6 +265,64 @@ export async function AIturn(client: pg.PoolClient, code: string): Promise<{ pla
     snapshot: snapshot,
   };
 }
+
+
+
+export async function leave(
+  client: pg.PoolClient,
+  params: { code: string; playerId: string }
+): Promise<{ playerId: string; seat: number; snapshot: GameSnapshot }> {
+
+  const gameRes = await client.query(
+    `SELECT * FROM games WHERE code = $1`,
+    [params.code]
+  )
+
+  if (!gameRes.rowCount) {
+    throw new Error("Game not found")
+  }
+
+  const game = gameRes.rows[0]
+
+  const playerRes = await client.query(
+    `SELECT * FROM players
+     WHERE game_id = $1 AND is_ai = false AND id = $2
+     ORDER BY seat
+     LIMIT 1`,
+    [game.id, params.playerId]
+  )
+
+  if (!playerRes.rowCount) {
+    throw new Error("Player not found")
+  }
+
+  const player = playerRes.rows[0]
+
+  const aiRes = await client.query(
+    `UPDATE players
+     SET name = $1, is_ai = true
+     WHERE id = $2
+     RETURNING *`,
+    [`AI ${player.seat}`, player.id]
+  )
+
+  const snapshot = await getSnapshot(client, params.code)
+
+  snapshot.state.players[player.seat].name = `AI ${player.seat}`; 
+  snapshot.state.players[player.seat].is_ai = true; 
+
+  await saveState(client, game.id, snapshot.state);
+
+  return {
+    playerId: player.id,
+    seat: player.seat,
+    snapshot,
+  }
+  
+
+}
+
+
 
 export async function getSnapshot(
   client: pg.PoolClient,
