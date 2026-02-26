@@ -313,6 +313,22 @@ export async function leave(
 
   await saveState(client, game.id, snapshot.state);
 
+  const playerCount = snapshot.players.filter(p => !p.is_ai).length;
+  if (playerCount === 0) {
+    await client.query(
+      `DELETE FROM games WHERE code = $1`,
+      [params.code]   
+    );
+    await client.query(
+      `DELETE FROM players WHERE game_id = $1`,
+      [game.id]   
+    );
+    await client.query(
+      `DELETE FROM game_states WHERE game_id = $1`,
+      [game.id]   
+    );
+  }
+
   return {
     playerId: player.id,
     seat: player.seat,
